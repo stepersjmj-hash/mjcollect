@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>MJ Collect</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>MJ Collect</h1>
+      <div class="preset-bar">
+        <select id="presetSelect" title="저장된 프리셋"></select>
+        <input id="presetName" type="text" placeholder="프리셋 이름" />
+        <button id="savePresetBtn" class="btn small" title="현재 설정 저장">저장</button>
+        <button id="deletePresetBtn" class="btn small ghost" title="선택 프리셋 삭제">삭제</button>
+      </div>
+    </header>
+
+    <section class="card">
+      <h2>1. 행 컨테이너 셀렉터</h2>
+      <p class="hint">한 항목(row)을 감싸는 요소의 CSS 셀렉터 (예: <code>.product-list &gt; li</code>)</p>
+      <input id="rowSelector" type="text" placeholder=".item, ul.products > li" />
+    </section>
+
+    <section class="card">
+      <h2>2. 추출할 필드</h2>
+      <p class="hint">각 행 내부에서 추출할 필드들. 셀렉터는 <b>행 기준 상대 경로</b>입니다. 비워두면 행 자체.</p>
+      <div id="fieldList" class="field-list"></div>
+      <button id="addFieldBtn" class="btn small">+ 필드 추가</button>
+    </section>
+
+    <section class="card">
+      <h2>3. 크롤링 범위</h2>
+      <div class="scope">
+        <label class="radio">
+          <input type="radio" name="scope" value="current" checked />
+          현재 탭만
+        </label>
+        <label class="radio">
+          <input type="radio" name="scope" value="pattern" />
+          페이지 범위 (URL 패턴)
+        </label>
+        <label class="radio">
+          <input type="radio" name="scope" value="next" />
+          페이지 범위 (다음 버튼)
+        </label>
+      </div>
+
+      <div id="patternBox" class="scope-box hidden">
+        <label>
+          URL 패턴 (페이지 번호는 <code>{N}</code>)
+          <input id="urlPattern" type="text" placeholder="https://example.com/list?page={N}" />
+        </label>
+        <div class="row2">
+          <label>시작
+            <input id="pageStart" type="number" min="1" value="1" />
+          </label>
+          <label>끝
+            <input id="pageEnd" type="number" min="1" value="3" />
+          </label>
+          <label>지연(ms)
+            <input id="pageDelay" type="number" min="0" value="800" />
+          </label>
+        </div>
+      </div>
+
+      <div id="nextBox" class="scope-box hidden">
+        <label>
+          "다음" 버튼 셀렉터
+          <input id="nextSelector" type="text" placeholder="a.next, button.pagination-next" />
+        </label>
+        <div class="row2">
+          <label>최대 페이지 수
+            <input id="maxPages" type="number" min="1" value="3" />
+          </label>
+          <label>페이지 로딩 대기(ms)
+            <input id="nextDelay" type="number" min="0" value="1200" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="actions">
+      <button id="runBtn" class="btn primary">크롤링 시작</button>
+      <button id="stopBtn" class="btn ghost" disabled>중지</button>
+      <span id="status" class="status"></span>
+    </section>
+
+    <section class="card result-card">
+      <div class="result-head">
+        <h2>결과 <span id="rowCount" class="count">0</span></h2>
+        <div class="export">
+          <button id="copyTsvBtn" class="btn small" title="구글시트에 바로 붙여넣기">TSV 복사</button>
+          <button id="csvBtn" class="btn small">CSV</button>
+          <button id="jsonBtn" class="btn small">JSON</button>
+          <button id="clearBtn" class="btn small ghost">초기화</button>
+        </div>
+      </div>
+      <div id="resultWrap" class="result-wrap">
+        <table id="resultTable"></table>
+      </div>
+    </section>
+  </div>
+
+  <template id="fieldRowTpl">
+    <div class="field-row">
+      <input class="f-name" type="text" placeholder="필드명 (예: 제목)" />
+      <input class="f-sel" type="text" placeholder="상대 셀렉터 (예: .title a)" />
+      <select class="f-attr" title="추출 방식">
+        <option value="text">text (내용)</option>
+        <option value="html">html</option>
+        <option value="href">href</option>
+        <option value="src">src</option>
+        <option value="value">value</option>
+        <option value="custom">속성명 직접…</option>
+      </select>
+      <input class="f-attr-name hidden" type="text" placeholder="속성명 (예: data-id)" />
+      <button class="del-field btn small ghost" title="삭제">×</button>
+    </div>
+  </template>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "MJ Collect - 웹 크롤러",
+  "version": "1.0.0",
+  "description": "CSS 셀렉터로 페이지에서 원하는 데이터를 수집하는 크롬 확장프로그램",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage",
+    "tabs",
+    "clipboardWrite"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "action": {
+    "default_title": "MJ Collect (클릭하여 새창 열기)"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}

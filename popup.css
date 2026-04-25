@@ -1,0 +1,142 @@
+:root {
+  --bg: #f7f8fb;
+  --card: #ffffff;
+  --border: #e5e7eb;
+  --text: #1f2937;
+  --muted: #6b7280;
+  --primary: #2563eb;
+  --primary-hover: #1d4ed8;
+  --danger: #ef4444;
+  --success: #16a34a;
+  --code-bg: #f3f4f6;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 13px;
+  color: var(--text);
+  background: var(--bg);
+  min-width: 480px;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+.app { padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+
+.header { display: flex; flex-direction: column; gap: 8px; }
+.header h1 { margin: 0; font-size: 16px; color: var(--primary); }
+.preset-bar { display: flex; gap: 6px; align-items: center; }
+.preset-bar select { flex: 1; min-width: 0; }
+.preset-bar input { flex: 1; min-width: 0; }
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+.card h2 { margin: 0 0 6px; font-size: 13px; color: var(--text); }
+.hint { margin: 0 0 8px; color: var(--muted); font-size: 11px; }
+code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+
+input[type="text"], input[type="number"], select {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  background: white;
+  color: var(--text);
+}
+input:focus, select:focus { outline: 2px solid #93c5fd; outline-offset: -1px; }
+
+.field-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.field-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 110px auto;
+  gap: 4px;
+  align-items: center;
+}
+.field-row.has-custom {
+  grid-template-columns: 100px 1fr 90px 100px auto;
+}
+.field-row .del-field { padding: 4px 8px; }
+
+.scope { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.radio { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.scope-box { border-top: 1px dashed var(--border); padding-top: 8px; margin-top: 4px; display: flex; flex-direction: column; gap: 8px; }
+.scope-box label { display: block; font-size: 12px; color: var(--muted); }
+.scope-box label input { margin-top: 4px; }
+.row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
+
+.actions { display: flex; gap: 8px; align-items: center; }
+.status { font-size: 12px; color: var(--muted); }
+.status.error { color: var(--danger); }
+.status.success { color: var(--success); }
+
+.btn {
+  padding: 7px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: white;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+}
+.btn:hover { background: #f9fafb; }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.btn.small { padding: 4px 8px; font-size: 11px; }
+.btn.primary {
+  background: var(--primary);
+  color: white;
+  border-color: var(--primary);
+}
+.btn.primary:hover:not(:disabled) { background: var(--primary-hover); }
+.btn.ghost { background: transparent; }
+
+.result-card { padding-bottom: 6px; }
+.result-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.result-head .export { display: flex; gap: 4px; }
+.count {
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-size: 11px;
+  margin-left: 6px;
+}
+
+.result-wrap { max-height: 360px; overflow: auto; border: 1px solid var(--border); border-radius: 6px; }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+table th, table td {
+  padding: 4px 6px;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+  vertical-align: top;
+  word-break: break-all;
+  max-width: 220px;
+}
+table th {
+  background: #f3f4f6;
+  position: sticky;
+  top: 0;
+  font-weight: 600;
+  z-index: 1;
+}
+table tr:hover td { background: #fafbff; }
+table td a { color: var(--primary); text-decoration: none; }
+table td a:hover { text-decoration: underline; }
+
+.hidden { display: none !important; }
