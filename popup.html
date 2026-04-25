@@ -39,11 +39,15 @@
         </label>
         <label class="radio">
           <input type="radio" name="scope" value="pattern" />
-          페이지 범위 (URL 패턴)
+          URL 패턴
         </label>
         <label class="radio">
           <input type="radio" name="scope" value="next" />
-          페이지 범위 (다음 버튼)
+          다음 버튼
+        </label>
+        <label class="radio">
+          <input type="radio" name="scope" value="pageclick" />
+          페이지 번호 클릭 (SPA)
         </label>
       </div>
 
@@ -67,8 +71,8 @@
 
       <div id="nextBox" class="scope-box hidden">
         <label>
-          "다음" 버튼 셀렉터
-          <input id="nextSelector" type="text" placeholder="a.next, button.pagination-next" />
+          "다음" 버튼 셀렉터 (jQuery 사이트는 <code>li.next a</code>처럼 <code>&lt;a&gt;</code>까지 지정)
+          <input id="nextSelector" type="text" placeholder="a.next, button.pagination-next, li.next > a" />
         </label>
         <div class="row2">
           <label>최대 페이지 수
@@ -79,6 +83,53 @@
           </label>
         </div>
       </div>
+
+      <div id="pageclickBox" class="scope-box hidden">
+        <label>
+          페이지 셀렉터 템플릿 (페이지 번호 자리는 <code>{N}</code>)
+          <input id="pageclickSelector" type="text" placeholder='[data-lp="{N}"] a, .pagination li[data-page="{N}"] > a' />
+        </label>
+        <p class="hint">URL이 안 바뀌는 SPA(jQuery bootpag, React 등)에서 페이지 번호를 한 칸씩 클릭. 예시 사이트의 <code>data-lp</code>: <code>#page-selection li[data-lp="{N}"] a</code></p>
+        <div class="row2">
+          <label>시작
+            <input id="pageclickStart" type="number" min="1" value="1" />
+          </label>
+          <label>끝
+            <input id="pageclickEnd" type="number" min="1" value="5" />
+          </label>
+          <label>로딩 대기(ms)
+            <input id="pageclickDelay" type="number" min="0" value="1500" />
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <section class="card sheet-card">
+      <details id="sheetDetails">
+        <summary>📊 구글시트 연동 (선택)</summary>
+        <div class="sheet-body">
+          <p class="hint">
+            Apps Script로 배포한 웹앱 URL과 토큰을 입력하면 결과를 시트에 추가/불러오기 할 수 있습니다.
+            셋업 방법은 <code>apps-script.gs</code> 파일 또는 README 참조.
+          </p>
+          <label>웹 앱 URL
+            <input id="sheetUrl" type="text" placeholder="https://script.google.com/macros/s/.../exec" />
+          </label>
+          <label>토큰 (Apps Script의 TOKEN 값과 동일)
+            <input id="sheetToken" type="text" placeholder="긴 랜덤 문자열" />
+          </label>
+          <label>스프레드시트 ID (선택, 비우면 스크립트가 속한 시트)
+            <input id="sheetId" type="text" placeholder="https://docs.google.com/spreadsheets/d/[이부분]/edit" />
+          </label>
+          <label>시트 탭 이름
+            <input id="sheetTab" type="text" placeholder="MJ Collect" value="MJ Collect" />
+          </label>
+          <div class="sheet-actions">
+            <button id="testSheetBtn" class="btn small">연결 테스트</button>
+            <span id="sheetTestStatus" class="status"></span>
+          </div>
+        </div>
+      </details>
     </section>
 
     <section class="actions">
@@ -91,6 +142,8 @@
       <div class="result-head">
         <h2>결과 <span id="rowCount" class="count">0</span></h2>
         <div class="export">
+          <button id="sendSheetBtn" class="btn small primary" title="현재 결과를 구글시트에 추가">📊 시트로</button>
+          <button id="fetchSheetBtn" class="btn small" title="구글시트의 데이터를 결과 표로 불러오기">📥 가져오기</button>
           <button id="copyTsvBtn" class="btn small" title="구글시트에 바로 붙여넣기">TSV 복사</button>
           <button id="csvBtn" class="btn small">CSV</button>
           <button id="jsonBtn" class="btn small">JSON</button>

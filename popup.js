@@ -1,4 +1,4 @@
-// popup.js — UI, 프리셋 관리, 크롤링 트리거, 결과 표시 및 내보내기
+// popup.js — UI, 프리셋 관리, 크롤링 트리거, 결과 표시 및 내보내기, 구글시트 연동(쓰기/읽기)
 
 const $ = (s, root = document) => root.querySelector(s);
 const $$ = (s, root = document) => Array.from(root.querySelectorAll(s));
@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   presets: "mjc_presets_v1",
   lastConfig: "mjc_last_config_v1",
   lastResult: "mjc_last_result_v1",
+  sheetConfig: "mjc_sheet_config_v1",
 };
 
 let lastResult = []; // 표시 중인 결과
@@ -14,10 +15,10 @@ let lastResult = []; // 표시 중인 결과
 // ----- 초기화 -----
 document.addEventListener("DOMContentLoaded", async () => {
   bindUI();
-  // 필드 행 1개로 시작
   await loadLastConfig();
   await refreshPresetSelect();
   await loadLastResult();
+  await loadSheetConfigToUI();
 });
 
 function bindUI() {
@@ -49,6 +50,7 @@ function bindUI() {
       const v = $('input[name="scope"]:checked').value;
       $("#patternBox").classList.toggle("hidden", v !== "pattern");
       $("#nextBox").classList.toggle("hidden", v !== "next");
+      $("#pageclickBox").classList.toggle("hidden", v !== "pageclick");
     })
   );
 
@@ -64,6 +66,14 @@ function bindUI() {
   $("#copyTsvBtn").addEventListener("click", () => copyTsv());
   $("#clearBtn").addEventListener("click", clearResult);
 
+  // 시트 연동
+  $("#testSheetBtn").addEventListener("click", testSheet);
+  $("#sendSheetBtn").addEventListener("click", sendToSheet);
+  $("#fetchSheetBtn").addEventListener("click", fetchFromSheet);
+  ["sheetUrl", "sheetToken", "sheetId", "sheetTab"].forEach((id) => {
+    $("#" + id).addEventListener("change", saveSheetConfigFromUI);
+  });
+
   // background -> popup 진행 메시지
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg && msg.type === "MJC_PROGRESS") {
@@ -72,7 +82,7 @@ function bindUI() {
         navigate: "이동 중",
         extract: "추출 중",
         "page-done": "완료",
-        "no-next": "다음 버튼 없음",
+        "no-next": "다음 페이지 없음",
       };
       setStatus(`[${p.page}/${p.total}] ${stageMap[p.stage] || p.stage} · 누적 ${p.count}`);
     }
@@ -123,6 +133,10 @@ function readConfig() {
     nextSelector: $("#nextSelector").value.trim(),
     maxPages: parseInt($("#maxPages").value, 10) || 1,
     nextDelay: parseInt($("#nextDelay").value, 10) || 0,
+    pageclickSelector: $("#pageclickSelector").value.trim(),
+    pageclickStart: parseInt($("#pageclickStart").value, 10) || 1,
+    pageclickEnd: parseInt($("#pageclickEnd").value, 10) || 1,
+    pageclickDelay: parseInt($("#pageclickDelay").value, 10) || 0,
   };
 }
 
@@ -137,6 +151,7 @@ function applyConfig(cfg) {
   if (r) r.checked = true;
   $("#patternBox").classList.toggle("hidden", scope !== "pattern");
   $("#nextBox").classList.toggle("hidden", scope !== "next");
+  $("#pageclickBox").classList.toggle("hidden", scope !== "pageclick");
 
   $("#urlPattern").value = cfg.urlPattern || "";
   $("#pageStart").value = cfg.pageStart || 1;
@@ -145,6 +160,10 @@ function applyConfig(cfg) {
   $("#nextSelector").value = cfg.nextSelector || "";
   $("#maxPages").value = cfg.maxPages || 3;
   $("#nextDelay").value = cfg.nextDelay ?? 1200;
+  $("#pageclickSelector").value = cfg.pageclickSelector || "";
+  $("#pageclickStart").value = cfg.pageclickStart || 1;
+  $("#pageclickEnd").value = cfg.pageclickEnd || 5;
+  $("#pageclickDelay").value = cfg.pageclickDelay ?? 1500;
 }
 
 // ----- 프리셋 -----
@@ -240,8 +259,6 @@ async function saveLastResult(rows) {
 }
 
 // ----- 활성 탭 조회 (새창 모드) -----
-// 새창 모드에서는 currentWindow가 popup 창이 되어버리므로,
-// 일반(normal) 창 중에서 마지막으로 포커스됐던 창의 활성 탭을 찾는다.
 async function getActiveNormalTab() {
   try {
     const win = await chrome.windows.getLastFocused({
@@ -252,19 +269,14 @@ async function getActiveNormalTab() {
       const t = win.tabs.find((x) => x.active);
       if (t) return t;
     }
-  } catch (e) {
-    /* fall through */
-  }
-  // fallback: 모든 normal 창 순회
+  } catch (e) { /* fall through */ }
   try {
     const wins = await chrome.windows.getAll({ windowTypes: ["normal"], populate: true });
     for (const w of wins) {
       const t = w.tabs && w.tabs.find((x) => x.active);
       if (t) return t;
     }
-  } catch (e) {
-    /* ignore */
-  }
+  } catch (e) { /* ignore */ }
   return null;
 }
 
@@ -282,6 +294,20 @@ async function run() {
   if (cfg.scope === "next" && !cfg.nextSelector) {
     setStatus("다음 버튼 셀렉터를 입력해 주세요.", "error");
     return;
+  }
+  if (cfg.scope === "pageclick") {
+    if (!cfg.pageclickSelector) {
+      setStatus("페이지 셀렉터 템플릿을 입력해 주세요.", "error");
+      return;
+    }
+    if (!cfg.pageclickSelector.includes("{N}")) {
+      setStatus("페이지 셀렉터 템플릿에 {N}을 포함해 주세요.", "error");
+      return;
+    }
+    if (cfg.pageclickEnd < cfg.pageclickStart) {
+      setStatus("끝 페이지가 시작 페이지보다 작습니다.", "error");
+      return;
+    }
   }
   await saveLastConfig(cfg);
 
@@ -377,7 +403,6 @@ function renderResult(rows) {
 function collectColumns(rows) {
   const set = new Set();
   rows.forEach((r) => Object.keys(r).forEach((k) => set.add(k)));
-  // _idx, __page는 뒤로 빼기
   const cols = Array.from(set).filter((c) => c !== "_idx" && c !== "__page");
   if (set.has("_idx")) cols.unshift("_idx");
   if (set.has("__page")) cols.push("__page");
@@ -436,7 +461,6 @@ function timestamp() {
 
 function exportCsv() {
   if (!lastResult.length) return setStatus("내보낼 결과가 없습니다.", "error");
-  // 엑셀 한글 호환을 위한 BOM
   const csv = "\uFEFF" + rowsToCsv(lastResult);
   downloadFile(`mjcollect_${timestamp()}.csv`, "text/csv", csv);
 }
@@ -451,5 +475,129 @@ async function copyTsv() {
     setStatus("TSV 복사 완료 — 구글시트/엑셀에 붙여넣기 하세요.", "success");
   } catch (e) {
     setStatus("클립보드 복사 실패: " + e.message, "error");
+  }
+}
+
+// ----- 구글시트 연동 -----
+function readSheetUI() {
+  let sid = $("#sheetId").value.trim();
+  const idMatch = sid.match(/spreadsheets\/d\/([a-zA-Z0-9_-]{20,})/);
+  if (idMatch) sid = idMatch[1];
+  return {
+    url: $("#sheetUrl").value.trim(),
+    token: $("#sheetToken").value,
+    spreadsheetId: sid,
+    sheetName: $("#sheetTab").value.trim() || "MJ Collect",
+  };
+}
+
+function applySheetUI(cfg) {
+  if (!cfg) return;
+  $("#sheetUrl").value = cfg.url || "";
+  $("#sheetToken").value = cfg.token || "";
+  $("#sheetId").value = cfg.spreadsheetId || "";
+  $("#sheetTab").value = cfg.sheetName || "MJ Collect";
+}
+
+async function loadSheetConfigToUI() {
+  const obj = await chrome.storage.local.get(STORAGE_KEYS.sheetConfig);
+  applySheetUI(obj[STORAGE_KEYS.sheetConfig] || {});
+}
+async function saveSheetConfigFromUI() {
+  const cfg = readSheetUI();
+  await chrome.storage.local.set({ [STORAGE_KEYS.sheetConfig]: cfg });
+}
+
+async function postToSheet(extra) {
+  const cfg = readSheetUI();
+  if (!cfg.url) throw new Error("웹 앱 URL을 입력해 주세요.");
+  if (!cfg.token) throw new Error("토큰을 입력해 주세요.");
+  if (!/^https:\/\/script\.google\.com\//.test(cfg.url)) {
+    throw new Error("웹 앱 URL이 https://script.google.com/... 형태가 아닙니다.");
+  }
+
+  const body = {
+    token: cfg.token,
+    spreadsheetId: cfg.spreadsheetId || undefined,
+    sheetName: cfg.sheetName,
+    ...(extra || {}),
+  };
+
+  let res;
+  try {
+    res = await fetch(cfg.url, {
+      method: "POST",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(body),
+    });
+  } catch (e) {
+    throw new Error("네트워크 오류: " + e.message);
+  }
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} ${res.statusText}`);
+  }
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    throw new Error("응답 파싱 실패. 웹앱이 JSON을 반환하지 않습니다. 배포 권한이 '모든 사용자'인지 확인하세요.");
+  }
+  if (!data.ok) throw new Error(data.error || "알 수 없는 오류");
+  return data;
+}
+
+async function testSheet() {
+  await saveSheetConfigFromUI();
+  const el = $("#sheetTestStatus");
+  el.textContent = "테스트 중…";
+  el.className = "status";
+  try {
+    const data = await postToSheet({ test: true });
+    el.textContent = "✓ 연결 OK · " + (data.message || "");
+    el.className = "status success";
+  } catch (e) {
+    el.textContent = "✗ " + (e.message || String(e));
+    el.className = "status error";
+  }
+}
+
+async function sendToSheet() {
+  if (!lastResult.length) return setStatus("보낼 결과가 없습니다.", "error");
+  await saveSheetConfigFromUI();
+  setStatus("시트에 전송 중…");
+  $("#sendSheetBtn").disabled = true;
+  try {
+    const cols = collectColumns(lastResult);
+    const data = await postToSheet({ columns: cols, rows: lastResult });
+    const linkPart = data.sheetUrl ? ` · 시트 열기: ${data.sheetUrl}` : "";
+    setStatus(`✓ 시트에 ${data.appended}행 추가됨 (${data.sheetName})${linkPart}`, "success");
+  } catch (e) {
+    setStatus("✗ 시트 전송 실패: " + (e.message || String(e)), "error");
+  } finally {
+    $("#sendSheetBtn").disabled = false;
+  }
+}
+
+async function fetchFromSheet() {
+  await saveSheetConfigFromUI();
+  setStatus("시트에서 가져오는 중…");
+  $("#fetchSheetBtn").disabled = true;
+  try {
+    const data = await postToSheet({ mode: "read" });
+    const rows = Array.isArray(data.rows) ? data.rows : [];
+    lastResult = rows;
+    await saveLastResult(rows);
+    renderResult(rows);
+    if (data.warning) {
+      setStatus("⚠ " + data.warning, "error");
+    } else {
+      const linkPart = data.sheetUrl ? ` · ${data.sheetUrl}` : "";
+      setStatus(`✓ 시트에서 ${rows.length}행 가져옴 (${data.sheetName || "시트"})${linkPart}`, "success");
+    }
+  } catch (e) {
+    setStatus("✗ 시트 가져오기 실패: " + (e.message || String(e)), "error");
+  } finally {
+    $("#fetchSheetBtn").disabled = false;
   }
 }

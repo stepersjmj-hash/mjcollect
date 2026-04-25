@@ -9,6 +9,7 @@
   --danger: #ef4444;
   --success: #16a34a;
   --code-bg: #f3f4f6;
+  --sheet: #0f9d58;
 }
 
 * { box-sizing: border-box; }
@@ -76,6 +77,40 @@ input:focus, select:focus { outline: 2px solid #93c5fd; outline-offset: -1px; }
 .scope-box label input { margin-top: 4px; }
 .row2 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; }
 
+/* ----- 시트 연동 카드 ----- */
+.sheet-card { padding: 0; }
+.sheet-card details > summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  list-style: none;
+  user-select: none;
+}
+.sheet-card details > summary::-webkit-details-marker { display: none; }
+.sheet-card details > summary::before {
+  content: "▶";
+  display: inline-block;
+  margin-right: 6px;
+  font-size: 9px;
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+.sheet-card details[open] > summary::before { transform: rotate(90deg); }
+.sheet-card details > summary:hover { background: #f9fafb; }
+.sheet-body {
+  padding: 0 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+.sheet-body label { display: block; font-size: 12px; color: var(--muted); }
+.sheet-body label input { margin-top: 3px; }
+.sheet-actions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+
 .actions { display: flex; gap: 8px; align-items: center; }
 .status { font-size: 12px; color: var(--muted); }
 .status.error { color: var(--danger); }
@@ -101,9 +136,19 @@ input:focus, select:focus { outline: 2px solid #93c5fd; outline-offset: -1px; }
 .btn.primary:hover:not(:disabled) { background: var(--primary-hover); }
 .btn.ghost { background: transparent; }
 
+/* 시트로 보내기 버튼만 녹색 강조 */
+#sendSheetBtn.btn.primary {
+  background: var(--sheet);
+  border-color: var(--sheet);
+}
+#sendSheetBtn.btn.primary:hover:not(:disabled) {
+  background: #0b7a44;
+  border-color: #0b7a44;
+}
+
 .result-card { padding-bottom: 6px; }
-.result-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.result-head .export { display: flex; gap: 4px; }
+.result-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-wrap: wrap; gap: 4px; }
+.result-head .export { display: flex; gap: 4px; flex-wrap: wrap; }
 .count {
   display: inline-block;
   background: var(--primary);
